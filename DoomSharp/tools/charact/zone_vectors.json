@@ -1,0 +1,14 @@
+[
+  { "op": "note", "v": "3 blocks: 100/STATIC, 200/LEVEL, 300/CACHE" },
+  { "op": "dump", "label": "after_alloc", "blocks": [{"size":240,"tag":50,"inuse":true}, {"size":340,"tag":101,"inuse":true}, {"size":140,"tag":1,"inuse":true}, {"size":3320,"tag":0,"inuse":false}] },
+  { "op": "dump", "label": "after_freetags_level", "blocks": [{"size":240,"tag":0,"inuse":false}, {"size":340,"tag":101,"inuse":true}, {"size":140,"tag":1,"inuse":true}, {"size":3320,"tag":0,"inuse":false}] },
+  { "op": "dump", "label": "after_freetags_maxint", "blocks": [{"size":580,"tag":0,"inuse":false}, {"size":140,"tag":1,"inuse":true}, {"size":3320,"tag":0,"inuse":false}] },
+  { "op": "dump", "label": "after_changetag", "blocks": [{"size":580,"tag":0,"inuse":false}, {"size":140,"tag":101,"inuse":true}, {"size":3320,"tag":0,"inuse":false}] },
+  { "op": "freemem", "v": 4040 },
+  { "op": "exhaust", "fatal": true },
+  { "op": "purgable_no_owner", "fatal": true },
+  { "op": "double_free", "fatal": true },
+  { "op": "changetag_freed", "fatal": true },
+  { "op": "changetag_no_owner", "fatal": true },
+  { "op": "end" }
+]
