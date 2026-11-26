@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DoomSharp.Core\DoomSharp.Core.csproj" />
     <ProjectReference Include="..\..\src\DoomSharp.Data\DoomSharp.Data.csproj" />
+    <ProjectReference Include="..\..\src\DoomSharp.Platform\DoomSharp.Platform.csproj" />
   </ItemGroup>
 
   <ItemGroup>

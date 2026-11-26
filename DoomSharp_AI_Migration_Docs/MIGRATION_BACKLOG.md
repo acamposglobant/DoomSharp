@@ -120,17 +120,27 @@ Layered per `VALIDATION.md`:
 
 ### DOOM-010 — Platform boundary: clock, error, quit
 
-- **Status:** Proposed
+- **Status:** Done (2026-11-26)
 - **Original files:** `i_system.h/c`
 - **Original symbols:** `I_GetTime` (`i_system.c:88`, 35 tics/s from `gettimeofday`), `I_Error` (`i_system.c:162`), `I_Quit`, `I_WaitVBL`, `I_ZoneBase`
 - **Responsibility:** wall-clock tics, fatal error path, shutdown
 - **Dependencies:** libc only
 - **Target project:** `DoomSharp.Platform` + interfaces `IClock`, `IErrorHandler` per `ARCHITECTURE.md`
-- **Target files/types:** `SystemClock : IClock`, `DoomError` exception + handler
+- **Target files/types:** `src/DoomSharp.Platform/Clock.cs` (`IClock`, `SystemClock`, `FakeClock`, `TimeConstants`), `src/DoomSharp.Platform/DoomShutdown.cs` (`DoomShutdown`, `ShutdownRegistry`, `IErrorHandler`, `IQuitHandler`)
 - **Semantic risks:** `I_Error` calls `exit(-1)` after shutdown — C# must decide exception vs Environment.Exit; tic conversion `tv_usec*TICRATE/1000000` integer truncation must be preserved
 - **Test strategy:** fake clock tests for tic conversion boundaries
 - **Acceptance criteria:** tic math matches C for sampled timestamps; error path writes message and shuts down cleanly
 - **Evidence/notes:** `i_system.c:88-125,158-182`
+- **Completion evidence (2026-11-26):**
+  - `DoomSharp.Platform` project: `IClock`/`SystemClock`/`FakeClock`, `IErrorHandler`/`IQuitHandler`, `DoomShutdown` + `ShutdownRegistry`.
+  - **Tic arithmetic preserved exactly:** `(sec * 35) + (usec * 35 / 1_000_000)` with integer truncation, computed in 64-bit (`Stopwatch` elapsed µs) — no 32-bit overflow; `TICRATE=35` (`doomdef.h:122`).
+  - **Anchor note:** `SystemClock` anchors `Stopwatch` at 0 tics on the **first `GetTime()` call** (mirroring the C `static basetime` anchoring, `i_system.c:96-97`), avoiding sub-second wall-clock phase jitter while preserving the exact truncation expression.
+  - **`I_WaitVBL`**: `count * (1000000/70)` = `count * 14285` µs (70 Hz VBL rate, distinct from TICRATE); `FakeClock` records waits without sleeping.
+  - **`I_Error` → `DoomShutdown.Fatal`**: `"Error: <msg>\n"` to stderr + flush, LIFO shutdown callbacks, then `DoomFatalException` (ADR-002 — host terminates with non-success exit code; library never exits the process).
+  - **`I_Quit`**: LIFO shutdown callbacks (atexit-style), then return; host performs `exit(0)`. `ShutdownRegistry` is instantiable with `Clear()` and `IDisposable` registration tokens for parallel-test isolation.
+  - **No C harness (documented decision):** `I_GetTime` reads `gettimeofday` directly — unmockable without LD_PRELOAD or source modification. The arithmetic is ported literally and tested exhaustively on `FakeClock` boundary values (sub-tic truncation, exact 1/35 s boundaries, 24-hour uptime, monotonicity).
+  - Tests: 2158 passing (19 new platform tests), 0 warnings.
+  - Deferred: `I_StartFrame`/`I_StartTic`/`I_BaseTiccmd`/`I_Tactile` (input/event pump, DOOM-030+), `I_Init` (sound), `I_AllocLow` (trivial at call sites), `I_ZoneBase` (superseded by ADR-003).
 
 ### DOOM-020 — Map lump loaders
 
