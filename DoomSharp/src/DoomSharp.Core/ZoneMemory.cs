@@ -293,7 +293,8 @@ public sealed class ZoneMemory : IDisposable
         return data switch
         {
             byte[] a => a.Length,
-            Array a => Buffer.ByteLength(a),
+            Array a when a.GetType().GetElementType()!.IsPrimitive => Buffer.ByteLength(a),
+            Array a => 64 * a.Length, // reference-type array: nominal per-element size
             string s => s.Length * 2,
             _ => 64, // opaque object: nominal tracking size
         };
