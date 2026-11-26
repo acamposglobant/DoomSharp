@@ -289,12 +289,12 @@ public class MapLoaderTests : IDisposable
         var level = MapLoaders.LoadLevel(wad, mapLump, zone);
 
         Assert.Equal(4, level.Vertexes.Length);
-        Assert.Equal(1, level.Sectors.Length);
+        Assert.Single(level.Sectors);
         Assert.Equal(2, level.Sides.Length);
         Assert.Equal(2, level.Lines.Length);
-        Assert.Equal(1, level.Subsectors.Length);
+        Assert.Single(level.Subsectors);
         Assert.Equal(2, level.Segs.Length);
-        Assert.Equal(1, level.Nodes.Length);
+        Assert.Single(level.Nodes);
         Assert.Single(level.Things);
         Assert.NotNull(level.BlockMap);
         Assert.Equal(3, level.Reject.Length);

@@ -133,5 +133,5 @@ public sealed class BlockMap
     public int OrgY;            // fixed
     public int Width;
     public int Height;
-    public short[] Lump;        // all words, SHORT()-swapped (little-endian read)
+    public short[] Lump = [];   // all words, SHORT()-swapped (little-endian read)
 }
