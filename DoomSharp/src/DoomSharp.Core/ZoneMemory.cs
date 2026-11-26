@@ -14,6 +14,8 @@
 //
 //-----------------------------------------------------------------------------
 
+using Serilog;
+
 namespace DoomSharp.Core;
 
 /// <summary>
@@ -114,6 +116,8 @@ public sealed class ZoneBlock<T> : ZoneBlock where T : class
 /// </summary>
 public sealed class ZoneMemory : IDisposable
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(ZoneMemory));
+
     private readonly List<ZoneBlock> _blocks = [];
     private readonly long? _maxBytes;
     private long _liveBytes;
@@ -121,6 +125,7 @@ public sealed class ZoneMemory : IDisposable
     /// <summary>Creates an unbounded zone (GC-managed heap).</summary>
     public ZoneMemory()
     {
+        Log.Verbose("ZoneMemory() unbounded");
     }
 
     /// <summary>
@@ -130,6 +135,7 @@ public sealed class ZoneMemory : IDisposable
     public ZoneMemory(long maxBytes)
     {
         _maxBytes = maxBytes;
+        Log.Verbose("ZoneMemory({MaxBytes} cap)", maxBytes);
     }
 
     /// <summary>
@@ -150,8 +156,11 @@ public sealed class ZoneMemory : IDisposable
     /// </summary>
     public ZoneBlock<T> Allocate<T>(T data, int tag, IZoneUser? owner = null) where T : class
     {
+        Log.Verbose("Allocate({Tag}, owner={HasOwner})", tag, owner != null);
+
         if (tag >= PurgeTags.PurgeLevel && owner == null)
         {
+            Log.Verbose("Allocate fatal: purgable tag {Tag} without owner", tag);
             throw new DoomFatalException(
                 "Z_Malloc: an owner is required for purgable blocks");
         }
@@ -160,6 +169,7 @@ public sealed class ZoneMemory : IDisposable
 
         if (_maxBytes is { } cap && _liveBytes + size > cap)
         {
+            Log.Verbose("Allocate fatal: {Size} bytes exceeds cap {Cap}", size, cap);
             throw new DoomFatalException(
                 $"Z_Malloc: failed on allocation of {size} bytes");
         }
@@ -168,6 +178,7 @@ public sealed class ZoneMemory : IDisposable
         _blocks.Add(block);
         _liveBytes += size;
         LiveBlocks++;
+        Log.Verbose("Allocate({Tag}) = {Size} bytes (live {LiveBytes})", tag, size, _liveBytes);
         return block;
     }
 
@@ -178,8 +189,11 @@ public sealed class ZoneMemory : IDisposable
     /// </summary>
     public void Free(ZoneBlock block)
     {
+        Log.Verbose("Free({Block})", block?.GetType().Name ?? "null");
+
         if (block == null || !block.InUse || !_blocks.Contains(block))
         {
+            Log.Verbose("Free fatal: block not in use (ZONEID check)");
             throw new DoomFatalException("Z_Free: freed a pointer without ZONEID");
         }
 
@@ -192,15 +206,20 @@ public sealed class ZoneMemory : IDisposable
     /// </summary>
     public void FreeTags(int lowTag, int highTag)
     {
+        Log.Verbose("FreeTags({LowTag}, {HighTag})", lowTag, highTag);
+
         // Snapshot: FreeCore mutates the list (z_zone.c:308-309 —
         // "get link before freeing").
+        var freed = 0;
         foreach (var block in _blocks.ToArray())
         {
             if (block.InUse && block.Tag >= lowTag && block.Tag <= highTag)
             {
                 FreeCore(block);
+                freed++;
             }
         }
+        Log.Verbose("FreeTags({LowTag}, {HighTag}) freed {Count} blocks", lowTag, highTag, freed);
     }
 
     /// <summary>
@@ -210,13 +229,17 @@ public sealed class ZoneMemory : IDisposable
     /// </summary>
     public void ChangeTag(ZoneBlock block, int newTag)
     {
+        Log.Verbose("ChangeTag({Block}, {NewTag})", block?.GetType().Name ?? "null", newTag);
+
         if (block == null || !block.InUse || !_blocks.Contains(block))
         {
+            Log.Verbose("ChangeTag fatal: block not in use (ZONEID check)");
             throw new DoomFatalException("Z_ChangeTag: freed a pointer without ZONEID");
         }
 
         if (newTag >= PurgeTags.PurgeLevel && block.Owner == null)
         {
+            Log.Verbose("ChangeTag fatal: purgable tag {Tag} without owner", newTag);
             throw new DoomFatalException(
                 "Z_ChangeTag: an owner is required for purgable blocks");
         }
@@ -245,8 +268,10 @@ public sealed class ZoneMemory : IDisposable
 
         if (total != _liveBytes || live != LiveBlocks)
         {
+            Log.Verbose("CheckHeap fatal: accounting inconsistent ({Total} vs {LiveBytes})", total, _liveBytes);
             throw new DoomFatalException("Z_CheckHeap: zone bookkeeping inconsistent");
         }
+        Log.Verbose("CheckHeap() ok ({LiveBlocks} blocks, {LiveBytes} bytes)", LiveBlocks, _liveBytes);
     }
 
     private void FreeCore(ZoneBlock block)

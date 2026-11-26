@@ -13,6 +13,16 @@ Layered per `VALIDATION.md`:
 4. **Determinism controls.** `P_Random`/`M_Random` are LUT-based (`m_random.c`) and `I_GetTime` is the only wall-clock input (`i_system.c:88`) — inject a fake clock; input comes from demo files, making full-tick deterministic replay possible.
 5. **Numeric rules.** All engine math is `int`/`fixed_t`/`angle_t` (32-bit). C# implementation uses `int`/`uint` with `unchecked` where wraparound is semantic; `FixedDiv2`'s `double` path is reproduced with `double` and truncating cast, validated by vectors (risk R-02).
 
+## Mandatory trace logging (ADR-004, applies to ALL items)
+
+Every class and method — existing and future — must emit structured
+Serilog trace logs at `LogEventLevel.Verbose`:
+
+- Each class declares `private static ILogger Log => Serilog.Log.ForContext(typeof(ClassName));` (re-resolving property, per ADR-004).
+- Every public/internal method logs entry (key parameters) and/or outcome via `Log.Verbose("Method({Param1}, {Param2})", ...)` — structured templates, never `$""` interpolation.
+- Hot-path methods (`FixedPoint`, `DoomRandom`, `AngleTables`, future renderer inner loops) guard with `if (Log.IsEnabled(LogEventLevel.Verbose))`.
+- **Acceptance criterion for every backlog item:** emission test with a Verbose sink attached + silent-by-default test. PRs without trace logging on new classes/methods are not mergeable.
+
 ## Items
 
 ### DOOM-001 — Fixed-point arithmetic

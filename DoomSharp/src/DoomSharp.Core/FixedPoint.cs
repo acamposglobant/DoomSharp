@@ -13,6 +13,9 @@
 //
 //-----------------------------------------------------------------------------
 
+using Serilog;
+using Serilog.Events;
+
 namespace DoomSharp.Core;
 
 /// <summary>
@@ -24,6 +27,8 @@ namespace DoomSharp.Core;
 /// </summary>
 public static class FixedPoint
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(FixedPoint));
+
     /// <summary>FRACBITS — number of fractional bits (m_fixed.h:35).</summary>
     public const int FracBits = 16;
 
@@ -45,7 +50,13 @@ public static class FixedPoint
     {
         unchecked
         {
-            return (int)(((long)a * (long)b) >> FracBits);
+            var result = (int)(((long)a * (long)b) >> FracBits);
+            // Hot path: guarded per ADR-004 (zero cost when disabled).
+            if (Log.IsEnabled(LogEventLevel.Verbose))
+            {
+                Log.Verbose("FixedMul({A}, {B}) = {Result}", a, b, result);
+            }
+            return result;
         }
     }
 
@@ -65,7 +76,12 @@ public static class FixedPoint
             int absB = b < 0 ? -b : b;
             if ((absA >> 14) >= absB)
             {
-                return (a ^ b) < 0 ? MinInt : MaxInt;
+                var sentinel = (a ^ b) < 0 ? MinInt : MaxInt;
+                if (Log.IsEnabled(LogEventLevel.Verbose))
+                {
+                    Log.Verbose("FixedDiv({A}, {B}) overflow sentinel = {Result}", a, b, sentinel);
+                }
+                return sentinel;
             }
             return FixedDiv2(a, b);
         }
@@ -85,8 +101,14 @@ public static class FixedPoint
 
         if (c >= 2147483648.0 || c < -2147483648.0)
         {
+            Log.Verbose("FixedDiv2({A}, {B}) fatal: result {C} out of range", a, b, c);
             throw new DoomFatalException("FixedDiv: divide by zero");
         }
-        return (int)c;
+        var result = (int)c;
+        if (Log.IsEnabled(LogEventLevel.Verbose))
+        {
+            Log.Verbose("FixedDiv2({A}, {B}) = {Result}", a, b, result);
+        }
+        return result;
     }
 }

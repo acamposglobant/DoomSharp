@@ -15,6 +15,7 @@
 //-----------------------------------------------------------------------------
 
 using DoomSharp.Core;
+using Serilog;
 
 namespace DoomSharp.Platform;
 
@@ -26,6 +27,8 @@ namespace DoomSharp.Platform;
 /// </summary>
 public sealed class ShutdownRegistry
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(ShutdownRegistry));
+
     private readonly List<Action> _callbacks = [];
 
     /// <summary>Number of registered callbacks (diagnostics/tests).</summary>
@@ -37,6 +40,7 @@ public sealed class ShutdownRegistry
     /// </summary>
     public IDisposable Register(Action callback)
     {
+        Log.Verbose("Register({Callback})", callback.Method.Name);
         _callbacks.Add(callback);
         return new Registration(this, callback);
     }
@@ -44,6 +48,7 @@ public sealed class ShutdownRegistry
     /// <summary>Removes all callbacks (test isolation helper).</summary>
     public void Clear()
     {
+        Log.Verbose("Clear({Count} callbacks)", _callbacks.Count);
         _callbacks.Clear();
     }
 
@@ -54,6 +59,7 @@ public sealed class ShutdownRegistry
     /// </summary>
     public void RunAll()
     {
+        Log.Verbose("RunAll({Count} callbacks)", _callbacks.Count);
         for (var i = _callbacks.Count - 1; i >= 0; i--)
         {
             try
@@ -88,6 +94,7 @@ public sealed class ShutdownRegistry
 /// </summary>
 public static class DoomShutdown
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(DoomShutdown));
     private static readonly ShutdownRegistry Registry = new();
 
     /// <summary>The registry used by Fatal/Quit (for host wiring/tests).</summary>
@@ -110,6 +117,7 @@ public static class DoomShutdown
     /// </summary>
     public static void Fatal(string message)
     {
+        Log.Verbose("Fatal({Message})", message);
         // i_system.c:168-173 — message first, then flush.
         Console.Error.Write("Error: ");
         Console.Error.WriteLine(message);
@@ -119,6 +127,7 @@ public static class DoomShutdown
         // graphics shutdown register here during their migrations).
         Registry.RunAll();
 
+        Log.Verbose("Fatal throwing DoomFatalException");
         throw new DoomFatalException(message);
     }
 
@@ -128,6 +137,7 @@ public static class DoomShutdown
     /// </summary>
     public static void Quit()
     {
+        Log.Verbose("Quit()");
         Registry.RunAll();
     }
 }

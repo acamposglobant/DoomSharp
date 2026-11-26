@@ -18,6 +18,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using DoomSharp.Core;
+using Serilog;
 
 namespace DoomSharp.Data;
 
@@ -28,6 +29,7 @@ namespace DoomSharp.Data;
 /// </summary>
 public sealed class WadDirectory : IDisposable
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(WadDirectory));
     private readonly List<LumpInfo> _lumps = [];
     private readonly List<IDisposable> _files = [];
     private readonly Dictionary<string, byte[]> _lumpCache = new(StringComparer.Ordinal);
@@ -68,17 +70,22 @@ public sealed class WadDirectory : IDisposable
     /// </summary>
     public void InitMultipleFiles(IEnumerable<string> filenames)
     {
+        var fileList = filenames as IList<string> ?? filenames.ToList();
+        Log.Verbose("InitMultipleFiles({Count} files)", fileList.Count);
+
         try
         {
-            foreach (var name in filenames)
+            foreach (var name in fileList)
             {
                 AddFile(name);
             }
 
             if (NumLumps == 0)
             {
+                Log.Verbose("InitMultipleFiles fatal: no files found");
                 throw new DoomFatalException("W_InitFiles: no files found");
             }
+            Log.Verbose("InitMultipleFiles() = {NumLumps} lumps", NumLumps);
         }
         catch
         {
@@ -95,6 +102,8 @@ public sealed class WadDirectory : IDisposable
     /// </summary>
     public void AddFile(string filename)
     {
+        Log.Verbose("AddFile({Filename})", filename);
+
         // Single-lump path: any file not ending in ".wad" (case-insensitive,
         // as the original uses strcasecmp via strcmpi, w_wad.c:158).
         // The original does NOT parse a WAD header here — it opens the
@@ -112,6 +121,7 @@ public sealed class WadDirectory : IDisposable
             catch (Exception e) when (e is not DoomFatalException)
             {
                 // w_wad.c:163-167 — printf + return; optional file missing.
+                Log.Verbose("AddFile skip: couldn't open {Filename}", filename);
                 Console.WriteLine($" couldn't open {filename}");
                 return;
             }
@@ -126,6 +136,7 @@ public sealed class WadDirectory : IDisposable
 
             _files.Add(file);
             _lumps.Add(lump);
+            Log.Verbose("AddFile single lump {Name} ({Size} bytes)", name, lump.Size);
             return;
         }
 
@@ -137,12 +148,14 @@ public sealed class WadDirectory : IDisposable
         }
         catch (Exception e) when (e is not DoomFatalException)
         {
+            Log.Verbose("AddFile skip: couldn't open {Filename}", filename);
             Console.WriteLine($" couldn't open {filename}");
             return;
         }
 
         _files.Add(wad);
         _lumps.AddRange(wad.Lumps);
+        Log.Verbose("AddFile wad {Filename} = {Count} lumps", filename, wad.Lumps.Count);
     }
 
     /// <summary>
@@ -195,10 +208,12 @@ public sealed class WadDirectory : IDisposable
         {
             if (NameMatches(_lumps[i], name8))
             {
+                Log.Verbose("CheckNumForName({Name}) = {Index}", name, i);
                 return i;
             }
         }
 
+        Log.Verbose("CheckNumForName({Name}) = -1 (not found)", name);
         return -1;
     }
 
@@ -210,6 +225,7 @@ public sealed class WadDirectory : IDisposable
         var lump = CheckNumForName(name);
         if (lump < 0)
         {
+            Log.Verbose("GetNumForName({Name}) fatal: not found", name);
             throw new DoomFatalException($"W_GetNumForName: {name} not found!");
         }
         return lump;
@@ -219,7 +235,9 @@ public sealed class WadDirectory : IDisposable
     public int LumpLength(int lump)
     {
         ValidateLumpIndex(lump);
-        return _lumps[lump].Size;
+        var size = _lumps[lump].Size;
+        Log.Verbose("LumpLength({Lump}) = {Size}", lump, size);
+        return size;
     }
 
     /// <summary>
@@ -236,6 +254,7 @@ public sealed class WadDirectory : IDisposable
         {
             info.Source.ReadAt(info.Position, data, info.Size);
         }
+        Log.Verbose("ReadLump({Lump}, {Name}) = {Size} bytes", lump, info.Name, info.Size);
         return data;
     }
 
@@ -258,11 +277,13 @@ public sealed class WadDirectory : IDisposable
             var name = _lumps[lump].Name;
             if (_lumpCache.TryGetValue(name, out var cached))
             {
+                Log.Verbose("CacheLumpNum({Lump}, {Tag}) hit (zone-less)", lump, tag);
                 return cached;
             }
 
             var data = ReadLump(lump);
             _lumpCache[name] = data;
+            Log.Verbose("CacheLumpNum({Lump}, {Tag}) miss, cached {Size} bytes", lump, tag, data.Length);
             return data;
         }
 
@@ -270,11 +291,13 @@ public sealed class WadDirectory : IDisposable
         if (_zoneLumpCache.TryGetValue(lump, out var block))
         {
             // Cache hit: Z_ChangeTag(lumpcache[lump], tag).
+            Log.Verbose("CacheLumpNum({Lump}, {Tag}) hit, retag", lump, tag);
             _zone.ChangeTag(block, tag);
             return block.Data;
         }
 
         // Cache miss: Z_Malloc(W_LumpLength(lump), tag, &lumpcache[lump]).
+        Log.Verbose("CacheLumpNum({Lump}, {Tag}) miss, reading", lump, tag);
         var lumpData = ReadLump(lump);
         var owner = new LumpCacheOwner(this, lump);
         block = _zone.Allocate(lumpData, tag, owner);
@@ -285,6 +308,7 @@ public sealed class WadDirectory : IDisposable
     /// <summary>W_CacheLumpName (w_wad.c:507-513).</summary>
     public byte[] CacheLumpName(string name, int tag = PurgeTags.Cache)
     {
+        Log.Verbose("CacheLumpName({Name}, {Tag})", name, tag);
         return CacheLumpNum(GetNumForName(name), tag);
     }
 
