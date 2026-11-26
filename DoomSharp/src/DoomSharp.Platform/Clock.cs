@@ -16,6 +16,8 @@
 //-----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using Serilog;
+using Serilog.Events;
 
 namespace DoomSharp.Platform;
 
@@ -84,6 +86,8 @@ public interface IQuitHandler
 /// </summary>
 public sealed class SystemClock : IClock
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(SystemClock));
+
     private long _baseTimestamp;
     private bool _anchored;
 
@@ -97,6 +101,7 @@ public sealed class SystemClock : IClock
             // so the first GetTime() returns ~0 tics.
             _baseTimestamp = now;
             _anchored = true;
+            Log.Verbose("GetTime() anchored basetime");
         }
 
         // 64-bit elapsed microseconds (no 32-bit overflow).
@@ -106,11 +111,18 @@ public sealed class SystemClock : IClock
         // integer truncation on the sub-second part (i_system.c:98).
         var seconds = elapsedUs / 1_000_000L;
         var usec = elapsedUs % 1_000_000L;
-        return (int)(seconds * TimeConstants.TicRate + usec * TimeConstants.TicRate / 1_000_000L);
+        var tics = (int)(seconds * TimeConstants.TicRate + usec * TimeConstants.TicRate / 1_000_000L);
+        // Hot path: guarded per ADR-004.
+        if (Log.IsEnabled(LogEventLevel.Verbose))
+        {
+            Log.Verbose("GetTime() = {Tics} tics ({ElapsedUs}us)", tics, elapsedUs);
+        }
+        return tics;
     }
 
     public void WaitVbl(int count)
     {
+        Log.Verbose("WaitVbl({Count})", count);
         // i_system.c:134 — usleep(count * (1000000/70)).
         var microseconds = (long)count * (1_000_000 / 70);
         if (microseconds <= 0)
@@ -140,6 +152,8 @@ public sealed class SystemClock : IClock
 /// </summary>
 public sealed class FakeClock : IClock
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(FakeClock));
+
     private long _baseUs;
     private bool _anchored;
 
@@ -156,17 +170,21 @@ public sealed class FakeClock : IClock
             // i_system.c:96-97 — anchor on first call.
             _baseUs = CurrentTimeUs;
             _anchored = true;
+            Log.Verbose("FakeClock anchored at {BaseUs}us", _baseUs);
         }
 
         var elapsedUs = CurrentTimeUs - _baseUs;
         var seconds = elapsedUs / 1_000_000L;
         var usec = elapsedUs % 1_000_000L;
-        return (int)(seconds * 35 + usec * 35 / 1_000_000L);
+        var tics = (int)(seconds * 35 + usec * 35 / 1_000_000L);
+        Log.Verbose("GetTime() = {Tics} tics (fake {ElapsedUs}us)", tics, elapsedUs);
+        return tics;
     }
 
     public void WaitVbl(int count)
     {
         VblWaits.Add((count, (long)count * (1_000_000 / 70)));
+        Log.Verbose("WaitVbl({Count}) recorded as {Microseconds}us", count, (long)count * (1_000_000 / 70));
         // No real sleep — deterministic tests.
     }
 }

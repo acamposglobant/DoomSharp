@@ -14,6 +14,9 @@
 //
 //-----------------------------------------------------------------------------
 
+using Serilog;
+using Serilog.Events;
+
 namespace DoomSharp.Core;
 
 /// <summary>
@@ -23,6 +26,7 @@ namespace DoomSharp.Core;
 /// </summary>
 public sealed class DoomRandom
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(DoomRandom));
     /// <summary>The original 256-entry random table (m_random.c:31-51).</summary>
     public static readonly byte[] RndTable =
     [
@@ -56,7 +60,13 @@ public sealed class DoomRandom
         unchecked
         {
             _prndIndex = (_prndIndex + 1) & 0xff;
-            return RndTable[_prndIndex];
+            var value = RndTable[_prndIndex];
+            // Hot path: guarded per ADR-004.
+            if (Log.IsEnabled(LogEventLevel.Verbose))
+            {
+                Log.Verbose("PRandom() = {Value} (index {Index})", value, _prndIndex);
+            }
+            return value;
         }
     }
 
@@ -66,7 +76,13 @@ public sealed class DoomRandom
         unchecked
         {
             _rndIndex = (_rndIndex + 1) & 0xff;
-            return RndTable[_rndIndex];
+            var value = RndTable[_rndIndex];
+            // Hot path: guarded per ADR-004.
+            if (Log.IsEnabled(LogEventLevel.Verbose))
+            {
+                Log.Verbose("MRandom() = {Value} (index {Index})", value, _rndIndex);
+            }
+            return value;
         }
     }
 
@@ -75,6 +91,7 @@ public sealed class DoomRandom
     {
         _prndIndex = 0;
         _rndIndex = 0;
+        Log.Verbose("ClearRandom()");
     }
 
     /// <summary>Current P_Random index (prndindex, m_random.c:53).</summary>

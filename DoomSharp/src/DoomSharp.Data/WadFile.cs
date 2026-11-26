@@ -17,6 +17,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using DoomSharp.Core;
+using Serilog;
 
 namespace DoomSharp.Data;
 
@@ -126,6 +127,8 @@ public sealed class LumpInfo
 /// </summary>
 public sealed class WadFile : ILumpSource
 {
+    private static ILogger Log => Serilog.Log.ForContext(typeof(WadFile));
+
     public const int HeaderSize = 12;
 
     private readonly FileStream _stream;
@@ -136,6 +139,7 @@ public sealed class WadFile : ILumpSource
 
     public WadFile(string path)
     {
+        Log.Verbose("WadFile({Path})", path);
         FilePath = path;
         _stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
@@ -149,6 +153,7 @@ public sealed class WadFile : ILumpSource
             var id = Encoding.ASCII.GetString(header.Slice(0, 4));
             if (id != "IWAD" && id != "PWAD")
             {
+                Log.Verbose("WadFile fatal: bad id {Id}", id);
                 throw new DoomFatalException(
                     $"Wad file {path} doesn't have IWAD or PWAD id");
             }
@@ -177,6 +182,7 @@ public sealed class WadFile : ILumpSource
             }
 
             Lumps = lumps;
+            Log.Verbose("WadFile({Path}) = {NumLumps} lumps, {FileLength} bytes", path, numLumps, FileLength);
         }
         catch
         {
@@ -189,6 +195,7 @@ public sealed class WadFile : ILumpSource
     {
         if (numLumps < 0)
         {
+            Log.Verbose("WadFile fatal: negative lump count {NumLumps}", numLumps);
             throw new DoomFatalException(
                 $"Wad file {FilePath}: negative lump count ({numLumps})");
         }
@@ -196,6 +203,7 @@ public sealed class WadFile : ILumpSource
         var directoryEnd = infoTableOfs + (long)numLumps * LumpInfo.DirectoryEntrySize;
         if (infoTableOfs < 0 || directoryEnd > FileLength)
         {
+            Log.Verbose("WadFile fatal: directory out of bounds (ofs={Ofs}, n={NumLumps})", infoTableOfs, numLumps);
             throw new DoomFatalException(
                 $"Wad file {FilePath}: directory out of bounds " +
                 $"(infotableofs={infoTableOfs}, numlumps={numLumps}, filelen={FileLength})");
@@ -206,6 +214,7 @@ public sealed class WadFile : ILumpSource
     {
         if (lump.Position < 0 || lump.Size < 0 || lump.Position + lump.Size > FileLength)
         {
+            Log.Verbose("WadFile fatal: lump {Index} out of bounds", index);
             throw new DoomFatalException(
                 $"Wad file {FilePath}: lump {index} ({lump.Name}) out of bounds " +
                 $"(pos={lump.Position}, size={lump.Size}, filelen={FileLength})");
