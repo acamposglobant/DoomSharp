@@ -168,7 +168,7 @@ Serilog trace logs at `LogEventLevel.Verbose`:
 
 ### DOOM-030 — Renderer core (later phase)
 
-- **Status:** Proposed (blocked by DOOM-020 map state)
+- **Status:** In progress — **Slice DOOM-030a Done (2026-11-26)**; remaining slices (BSP traversal, seg/plane/thing drawing, column drawers, sky) Proposed
 - **Original files:** `r_main.c`, `r_bsp.c`, `r_segs.c`, `r_plane.c`, `r_things.c`, `r_draw.c`, `r_data.c`, `r_sky.c`, `r_plane.c`, `v_video.c`
 - **Original symbols:** `R_RenderPlayerView` (`r_main.c:870`), `R_Init` (`r_main.c:773`), `R_PointInSubsector` (`r_main.c:801`), colormaps alignment hack (`r_data.c:641-643`), column/span drawers (`r_draw.c`)
 - **Responsibility:** deterministic software renderer to 320×200 8-bit framebuffer
@@ -178,6 +178,14 @@ Serilog trace logs at `LogEventLevel.Verbose`:
 - **Test strategy:** fixed camera + `-playdemo` frame dumps; exact pixel comparison (deterministic integer pipeline)
 - **Acceptance criteria:** selected frames pixel-identical to reference build (risk R-01: requires Linux reference build)
 - **Evidence/notes:** `r_main.c:868-894`
+
+#### DOOM-030a — Renderer Data & Texture/Flat/Colormap Manager (`r_data.c`) — Done (2026-11-26)
+
+- **Scope:** `R_InitData`/`R_InitTextures`/`R_InitFlats`/`R_InitSpriteLumps`/`R_InitColormaps`, `R_GenerateLookup`, `R_GenerateComposite`, `R_DrawColumnInCache`, `R_GetColumn`, `R_CheckTextureNumForName`/`R_TextureNumForName`/`R_FlatNumForName`, and the DOOM-020 name-resolution bridge. Resolves the deferred `R_TextureNumForName`/`R_FlatNumForName` mapping from DOOM-020.
+- **Target:** new `DoomSharp.Rendering` project (`TextureManager`, `Texture`, `TexPatch`); `Sector.FloorFlat`/`CeilingFlat` and `Side.TopTextureIndex/BottomTextureIndex/MidTextureIndex` populated by `TextureManager.ResolveLevelTextures(level)` (Option a — raw 8-byte names retained).
+- **Exact details preserved:** power-of-two `texturewidthmask` loop (`r_data.c:551-555`, width 48 → mask 31), `colofs = columnofs[x-x1]+3` post-header skip (`r_data.c:345`), multi-patch columns `collump = -1` + composite slots, `>64k` composite fatal (`r_data.c:365-369`), post traversal pixels at `+3` / advance `length+4` (`r_data.c:198-216`), `"-"` NoTexture → 0, case-insensitive 8-char `strncasecmp` semantics (query longer than 8 matches its 8-char prefix), `R_FlatNumForName` range check `[firstflat, lastflat]` (user-approved addition), `GetColumn` width-mask wrapping, `R_InitData` order Textures→Flats→Sprites→Colormaps.
+- **Documented deviations:** (1) `GetColumn` returns `ReadOnlySpan<byte>` (zero-copy) instead of a raw pointer. (2) `CheckFlatNumForName` added (no C counterpart; non-fatal lookup). (3) COLORMAP 256-byte alignment omitted (C allocator detail). (4) "Column without a patch" → `Console.WriteLine` + empty composite (C prints then would UB on render; managed code logs and continues). (5) Composites are managed arrays retagged conceptually `PU_CACHE` (zone block tracking deferred to the zone-integration slice). (6) `FlatNumForName` additionally verifies the lump is within `[firstflat, lastflat]` (user-approved hardening).
+- **Test evidence:** 2205/2205 passing (21 new), 0 warnings, Release `-warnaserror` clean. Synthetic fixtures: patch_t builder with per-column posts (topdelta/length/pad/pixels/pad/0xff), PNAMES, TEXTURE1 single- and multi-patch overlap composites, width-mask wrapping, `COLORMAP` 34×256, sprite headers, `ResolveLevelTextures` integration, optional `DOOMWADDIR` IWAD test, ADR-004 trace tests.
 
 ### DOOM-040 — Platform: video/audio/input (replacement, not port)
 

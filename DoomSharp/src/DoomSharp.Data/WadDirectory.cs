@@ -218,6 +218,27 @@ public sealed class WadDirectory : IDisposable
     }
 
     /// <summary>
+    /// W_CheckNumForName overload taking a raw 8-byte lump name
+    /// (PNAMES entries are raw bytes; converting to string first would
+    /// lose the NUL-padding semantics).
+    /// </summary>
+    public int CheckNumForName(byte[] name8)
+    {
+        // Backwards scan — precedence to later files (w_wad.c:376-386).
+        for (var i = _lumps.Count - 1; i >= 0; i--)
+        {
+            if (NameMatches(_lumps[i], name8))
+            {
+                Log.Verbose("CheckNumForName(raw) = {Index}", i);
+                return i;
+            }
+        }
+
+        Log.Verbose("CheckNumForName(raw) = -1 (not found)");
+        return -1;
+    }
+
+    /// <summary>
     /// W_GetNumForName (w_wad.c:397-407): fatal if not found.
     /// </summary>
     public int GetNumForName(string name)
@@ -348,6 +369,32 @@ public sealed class WadDirectory : IDisposable
         // NUL-stripped forms is equivalent for all practical names.
         return string.Equals(lump.Name, name8, StringComparison.Ordinal);
         // Note: lump.Name is already ASCII-uppercased at parse time.
+    }
+
+    /// <summary>
+    /// Raw 8-byte name comparison (PNAMES entries): ASCII-uppercase the
+    /// bytes, NUL-strips both sides, ordinal equality.
+    /// </summary>
+    private static bool NameMatches(LumpInfo lump, byte[] name8)
+    {
+        var len = Math.Min(name8.Length, LumpInfo.NameLength);
+        var end = 0;
+        while (end < len && name8[end] != 0)
+        {
+            end++;
+        }
+        if (lump.Name.Length != end)
+        {
+            return false;
+        }
+        for (var i = 0; i < end; i++)
+        {
+            if (AsciiUpperChar((char)name8[i]) != lump.Name[i])
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void ValidateLumpIndex(int lump)
