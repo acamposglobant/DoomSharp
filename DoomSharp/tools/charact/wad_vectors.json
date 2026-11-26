@@ -1,0 +1,23 @@
+[
+ adding /src/DoomSharp/tools/charact/wadfixtures/test_iwad.wad
+ adding /src/DoomSharp/tools/charact/wadfixtures/test_pwad.wad
+ adding /src/DoomSharp/tools/charact/wadfixtures/DEHACKED
+ couldn't open /src/DoomSharp/tools/charact/wadfixtures/missing.wad
+  { "op": "numlumps", "v": 4 },
+  { "i": 0, "name": "E1M1", "pos": 12, "size": 8 },
+  { "i": 1, "name": "MAP01", "pos": 20, "size": 4 },
+  { "i": 2, "name": "MAP01", "pos": 12, "size": 4 },
+  { "i": 3, "name": "DEHACKED", "pos": 0, "size": 3 },
+  { "op": "check", "name": "E1M1", "r": 0 },
+  { "op": "check", "name": "MAP01", "r": 2 },
+  { "op": "check", "name": "map01", "r": 2 },
+  { "op": "check", "name": "DEHACK", "r": -1 },
+  { "op": "check", "name": "MISSING", "r": -1 },
+  { "op": "get", "name": "E1M1", "r": 0 },
+  { "op": "length", "name": "E1M1", "v": 8 },
+  { "op": "read", "name": "E1M1", "data": [1,2,3,4,5,6,7,8] },
+  { "op": "dup_precedence", "index": 2, "data": [17,34,51,68] },
+  { "op": "oor", "fatal": true },
+  { "op": "get", "name": "NOEXIST", "fatal": true },
+  { "op": "end" }
+]
