@@ -31,6 +31,28 @@ public sealed class WadDirectory : IDisposable
     private readonly List<LumpInfo> _lumps = [];
     private readonly List<IDisposable> _files = [];
     private readonly Dictionary<string, byte[]> _lumpCache = new(StringComparer.Ordinal);
+    private readonly ZoneMemory? _zone;
+
+    /// <summary>
+    /// Per-lump zone blocks when a zone is attached — the managed
+    /// equivalent of lumpcache[] (w_wad.c:66,490). The block's OnFreed
+    /// write-back clears the entry so the lump is re-read after a purge.
+    /// </summary>
+    private readonly Dictionary<int, ZoneBlock<byte[]>> _zoneLumpCache = [];
+
+    /// <summary>Creates a directory without zone tracking (plain cache).</summary>
+    public WadDirectory()
+    {
+    }
+
+    /// <summary>
+    /// Creates a directory whose lump caching goes through the zone
+    /// (the W_CacheLumpNum tag lifecycle, w_wad.c:475-500).
+    /// </summary>
+    public WadDirectory(ZoneMemory zone)
+    {
+        _zone = zone ?? throw new ArgumentNullException(nameof(zone));
+    }
 
     /// <summary>Total number of lumps (numlumps, w_wad.c:66).</summary>
     public int NumLumps => _lumps.Count;
@@ -218,28 +240,65 @@ public sealed class WadDirectory : IDisposable
     }
 
     /// <summary>
-    /// W_CacheLumpNum (w_wad.c:472-510) with a managed cache in place of
-    /// z_zone purge tags (documented deviation, revisited in DOOM-005).
+    /// W_CacheLumpNum (w_wad.c:472-510). Without a zone: managed cache
+    /// in place of z_zone purge tags (documented deviation, revisited in
+    /// DOOM-005). With a zone attached: full tag lifecycle — miss
+    /// allocates through the zone with the caller's tag and a per-lump
+    /// owner (the &amp;lumpcache[lump] write-back, w_wad.c:490); hit
+    /// retags via ChangeTag (w_wad.c:496). Purged lumps are re-read
+    /// from file on next access.
     /// </summary>
-    public byte[] CacheLumpNum(int lump)
+    public byte[] CacheLumpNum(int lump, int tag = PurgeTags.Cache)
     {
         ValidateLumpIndex(lump);
 
-        var name = _lumps[lump].Name;
-        if (_lumpCache.TryGetValue(name, out var cached))
+        if (_zone == null)
         {
-            return cached;
+            // Zone-less path (DOOM-004 behavior).
+            var name = _lumps[lump].Name;
+            if (_lumpCache.TryGetValue(name, out var cached))
+            {
+                return cached;
+            }
+
+            var data = ReadLump(lump);
+            _lumpCache[name] = data;
+            return data;
         }
 
-        var data = ReadLump(lump);
-        _lumpCache[name] = data;
-        return data;
+        // Zone-tracked path (w_wad.c:485-497).
+        if (_zoneLumpCache.TryGetValue(lump, out var block))
+        {
+            // Cache hit: Z_ChangeTag(lumpcache[lump], tag).
+            _zone.ChangeTag(block, tag);
+            return block.Data;
+        }
+
+        // Cache miss: Z_Malloc(W_LumpLength(lump), tag, &lumpcache[lump]).
+        var lumpData = ReadLump(lump);
+        var owner = new LumpCacheOwner(this, lump);
+        block = _zone.Allocate(lumpData, tag, owner);
+        _zoneLumpCache[lump] = block;
+        return block.Data;
     }
 
-    /// <summary>W_CacheLumpName (w_wad.c:512-519).</summary>
-    public byte[] CacheLumpName(string name)
+    /// <summary>W_CacheLumpName (w_wad.c:507-513).</summary>
+    public byte[] CacheLumpName(string name, int tag = PurgeTags.Cache)
     {
-        return CacheLumpNum(GetNumForName(name));
+        return CacheLumpNum(GetNumForName(name), tag);
+    }
+
+    /// <summary>
+    /// The &amp;lumpcache[lump] write-back (w_wad.c:490): when the zone
+    /// frees the block, the cache slot is cleared so the next
+    /// CacheLumpNum re-reads the lump from file.
+    /// </summary>
+    private sealed class LumpCacheOwner(WadDirectory directory, int lump) : IZoneUser
+    {
+        public void OnFreed(ZoneBlock block)
+        {
+            directory._zoneLumpCache.Remove(lump);
+        }
     }
 
     /// <summary>
@@ -285,5 +344,6 @@ public sealed class WadDirectory : IDisposable
         _files.Clear();
         _lumps.Clear();
         _lumpCache.Clear();
+        _zoneLumpCache.Clear();
     }
 }

@@ -99,17 +99,24 @@ Layered per `VALIDATION.md`:
 
 ### DOOM-005 — Zone memory allocator (semantic replacement)
 
-- **Status:** Proposed
+- **Status:** Done (2026-11-26)
 - **Original files:** `z_zone.h`, `z_zone.c`, `i_system.c` (`I_ZoneBase`, 6 MB)
 - **Original symbols:** `Z_Init`, `Z_Malloc`, `Z_Free`, `Z_FreeTags`, `Z_ChangeTag2`, `memblock_t`, `PU_*` tags (`z_zone.h:36-44`)
 - **Responsibility:** tagged purge-able allocator; `PU_LEVEL`/`PU_CACHE` semantics drive what is freed between levels
 - **Dependencies:** i_system
 - **Target project:** `DoomSharp.Core`
-- **Target files/types:** likely **replaced** by GC + explicit `PurgeTags()` bookkeeping — needs ADR
+- **Target files/types:** `src/DoomSharp.Core/ZoneMemory.cs` — `ZoneMemory`, `ZoneBlock<T>`, `PurgeTags`, `IZoneUser` (ADR-003)
 - **Semantic risks:** original relies on `Z_Malloc` failing/purging when the 6 MB zone fills; C# has no equivalent pressure. Behavior-visible only through cache eviction; document as intentional deviation if replaced
 - **Test strategy:** if ported: allocation/free/tag tests mirroring `z_zone.c`; if replaced: level-load memory equivalence checks
 - **Acceptance criteria:** ADR accepted; level load/unload cycles produce no unbounded growth; purge behavior documented
 - **Evidence/notes:** `z_zone.h:36-66`, `z_zone.c:43,91-130`
+- **Completion evidence (2026-11-26):**
+  - ADR-003 accepted: managed tag-tracked ownership model; fixed arena/rover/merging not simulated; `maxBytes` cap opt-in (default unbounded, per project owner decision).
+  - C characterization harness `tools/charact/zonedump.c` compiles the **unmodified** `z_zone.c` (gcc 13, Docker); dump `tools/charact/zone_vectors.json` confirms: `FreeTags(PU_LEVEL, PU_PURGELEVEL-1)` frees only level tags, `FreeTags(PU_LEVEL, MAXINT)` also frees `PU_CACHE`, owned-block retag to `PU_CACHE`, and all five fatal paths (exhaustion, purgable-without-owner, double free, ChangeTag on freed block, ChangeTag to purgable without owner).
+  - Harness discovery: retagging an **unowned** block to a purgable tag is fatal in the original C (`z_zone.c:440` sentinel check) — reproduced in C#.
+  - C# `ZoneMemory` matches all C outcomes; `OnFreed` write-back replaces the `void** user` zeroing; `ZoneBlock<T>` carries typed payloads for lump buffers and future map structures.
+  - `WadDirectory` zone integration: `CacheLumpNum(lump, tag)` mirrors `w_wad.c:475-500` (miss allocates with caller tag + per-lump owner, hit retags, purge invalidates slot → lump re-read from file). Resolves the DOOM-004 documented deviation.
+  - Tests: 2139 passing (22 new zone/WAD-zone tests), 0 warnings. Level cycles return `LiveBytes` to baseline; capped zone reproduces exhaustion fatal with original message.
 
 ### DOOM-010 — Platform boundary: clock, error, quit
 
