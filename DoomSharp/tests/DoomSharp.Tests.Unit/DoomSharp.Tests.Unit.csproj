@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\DoomSharp.Core\DoomSharp.Core.csproj" />
     <ProjectReference Include="..\..\src\DoomSharp.Data\DoomSharp.Data.csproj" />
     <ProjectReference Include="..\..\src\DoomSharp.Platform\DoomSharp.Platform.csproj" />
+    <ProjectReference Include="..\..\src\DoomSharp.Rendering\DoomSharp.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>

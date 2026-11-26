@@ -62,6 +62,15 @@ public sealed class Side
     public byte[] BottomTexture = []; // raw 8-byte name
     public byte[] MidTexture = [];    // raw 8-byte name
     public int Sector;          // index
+
+    /// <summary>
+    /// Resolved texture indices (side_t.toptexture etc. in C are
+    /// shorts after P_LoadSideDefs calls R_TextureNumForName). -1 =
+    /// not yet resolved; populated by TextureManager.ResolveLevelTextures.
+    /// </summary>
+    public int TopTextureIndex = -1;
+    public int BottomTextureIndex = -1;
+    public int MidTextureIndex = -1;
 }
 
 /// <summary>line_t (r_defs.h:150-190) — index-based references.</summary>
@@ -91,6 +100,14 @@ public sealed class Sector
     public short LightLevel;
     public short Special;
     public short Tag;
+
+    /// <summary>
+    /// Resolved flat indices (sector_t.floorpic/ceilingpic in C are
+    /// ints after P_LoadSectors calls R_FlatNumForName). -1 = not yet
+    /// resolved; populated by TextureManager.ResolveLevelTextures.
+    /// </summary>
+    public int FloorFlat = -1;
+    public int CeilingFlat = -1;
 }
 
 /// <summary>seg_t (r_defs.h:92-118) — index-based references.</summary>
