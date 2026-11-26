@@ -105,12 +105,28 @@ public static class AngleTables
     public const int FineMask = FineAngles - 1;  // FINEMASK
     public const int AngleToFineShift = 19;      // ANGLETOFINESHIFT
     public const int SlopeRange = 2048;          // SLOPERANGE
+    public const int DBits = 5;                  // DBITS = FRACBITS - SLOPEBITS (tables.h:76)
 
     // Binary Angle Measurement, BAM (tables.h:68-71).
     public const uint Ang45 = 0x20000000;
     public const uint Ang90 = 0x40000000;
     public const uint Ang180 = 0x80000000;
     public const uint Ang270 = 0xc0000000;
+
+    /// <summary>
+    /// SlopeDiv (tables.c:50-62): utility called by R_PointToAngle.
+    /// den &lt; 512 clamps to SLOPERANGE; result clamped to SLOPERANGE.
+    /// </summary>
+    public static int SlopeDiv(uint num, uint den)
+    {
+        if (den < 512)
+        {
+            return SlopeRange;
+        }
+
+        var ans = (num << 3) / (den >> 8);
+        return ans <= SlopeRange ? (int)ans : SlopeRange;
+    }
 
     /// <summary>finesine[5*FINEANGLES/4] (tables.c).</summary>
     public static readonly int[] FineSine =
