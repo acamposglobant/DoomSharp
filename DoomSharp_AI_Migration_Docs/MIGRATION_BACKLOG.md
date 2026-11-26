@@ -154,17 +154,17 @@ Serilog trace logs at `LogEventLevel.Verbose`:
 
 ### DOOM-020 — Map lump loaders
 
-- **Status:** Proposed
+- **Status:** Done (2026-11-26)
 - **Original files:** `p_setup.c`, `doomdata.h`
 - **Original symbols:** `P_LoadVertexes` (`p_setup.c:122`), `P_LoadSegs` (`p_setup.c:159`), `P_LoadSubsectors` (`p_setup.c:202`), `P_LoadSectors` (`p_setup.c:231`), `P_LoadNodes` (`p_setup.c:264`), `P_LoadThings` (`p_setup.c:301`), `P_LoadLineDefs` (`p_setup.c:357`), `P_LoadSideDefs` (`p_setup.c:436`), `P_SetupLevel` (`p_setup.c:584`), `P_LoadBlockMap`, `P_LoadReject`
 - **Responsibility:** parse all map lumps into runtime structures (`vertex_t`, `sector_t`, `line_t`, `node_t`, `subsector_t` in `r_defs.h`)
-- **Dependencies:** DOOM-004 (WAD), DOOM-001 (fixed_t), z_zone
-- **Target project:** `DoomSharp.Data` (parsing) + `DoomSharp.Core` (runtime types)
-- **Target files/types:** `MapLoader.cs`, record types for `Vertex`, `LineDef`, `SideDef`, `Sector`, `Seg`, `Subsector`, `Node`
+- **Dependencies:** DOOM-004 (WAD), DOOM-001 (fixed_t), DOOM-005 (zone), ADR-004 (tracing)
+- **Target project:** `DoomSharp.Data`
+- **Target files/types:** `MapRecords.cs` (raw `mapX_t` readers + `MapLumpOffsets` + `LineDefFlags` + `NodeFlags`), `MapDataTypes.cs` (runtime `Vertex`/`Side`/`Line`/`Sector`/`Seg`/`Subsector`/`Node`/`BlockMap`, `SlopeType`, `BBox`), `MapLoaders.cs` (10 loaders + `LoadLevel` orchestrator + `LevelData`)
 - **Semantic risks:** `short` sign handling (e.g. `NF_SUBSECTOR 0x8000` vs `unsigned short children`, `doomdata.h:178-191`); little-endian reads; `RANGECHECK` aborts on bad data (`p_setup.c` uses `I_Error`)
-- **Test strategy:** parse E1M1 from shareware IWAD; assert counts and sampled field values against C-harness dump; malformed-lump negative tests
-- **Acceptance criteria:** all map structures match reference dump; malformed input fails with context, not crash
-- **Evidence/notes:** `p_setup.c:120-580`, `doomdata.h:60-210`
+- **Test strategy:** hand-derived synthetic map fixtures (binary builders per `doomdata.h` layout); all 4 `SlopeType` cases; `ML_TWOSIDED` vs single-sided backsector; `NF_SUBSECTOR` unsigned children; truncation on non-multiple lump sizes; out-of-range index fatals; `PU_LEVEL` zone cleanup cycles; optional `DOOMWADDIR` E1M1 consistency test; ADR-004 trace verification
+- **Acceptance criteria:** all map structures match hand-derived expectations; malformed input fails with `DoomFatalException`, not a crash; zone returns to baseline after `FreeTags(PU_LEVEL, ...)`
+- **Evidence/notes:** `p_setup.c:120-580`, `doomdata.h:60-210`. **Documented deviations:** (1) Option A — texture/flat names stored raw on `Side`/`Sector`; `R_TextureNumForName`/`R_FlatNumForName` resolution deferred to DOOM-030. (2) C pointer graph → int indices (`seg.v1`, `line.sidenum`, etc.). (3) C out-of-bounds UB (bad seg→linedef, line→vertex, sidedef→sector indices) → `DoomFatalException` per ADR-002. (4) Truncated blockmap (< 4 words) fatals; C would read garbage. (5) `P_LoadThings` stores raw `mapthing_t` records — `P_SpawnMapThing` is DOOM-021. (6) No C characterization harness: loaders are fully specified by `doomdata.h` offsets + conversion expressions; a harness would require stubbing `R_TextureNumForName`/zone/WAD globals — hand-derived binary fixtures give equivalent coverage (user-approved). (7) `ZoneMemory.EstimateSize` extended: reference-type arrays estimate 64 bytes/element (was `Buffer.ByteLength`, primitive-only). Test evidence: 2184/2184 passing (18 new map tests), 0 warnings.
 
 ### DOOM-030 — Renderer core (later phase)
 
