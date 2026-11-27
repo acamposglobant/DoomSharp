@@ -447,6 +447,20 @@ public sealed class TextureManager : IDisposable
     /// </summary>
     public ReadOnlySpan<byte> GetColumn(WadDirectory wad, int tex, int col)
     {
+        var buffer = GetColumn(wad, tex, col, out var offset);
+        return buffer.AsSpan(offset);
+    }
+
+    /// <summary>
+    /// Zero-copy variant of <see cref="GetColumn"/> (DOOM-030c): returns
+    /// the underlying cached patch buffer or composite array together
+    /// with the byte offset of the column's first pixel. Avoids any
+    /// per-column copying inside R_RenderSegLoop; callers index
+    /// <c>buffer[offset + i]</c> exactly like the C pointer arithmetic
+    /// of <c>dc_source</c>.
+    /// </summary>
+    public byte[] GetColumn(WadDirectory wad, int tex, int col, out int offset)
+    {
         col &= _texturewidthmask[tex];                       // r_data.c:390
         var lump = _texturecolumnlump[tex][col];             // r_data.c:391
         var ofs = _texturecolumnofs[tex][col];               // r_data.c:392
@@ -458,7 +472,9 @@ public sealed class TextureManager : IDisposable
             {
                 Log.Verbose("GetColumn({Tex}, {Col}) from patch {Lump}", tex, col, lump);
             }
-            return patch.AsSpan(ofs);
+
+            offset = ofs;
+            return patch;
         }
 
         if (_texturecomposite[tex] == null)
@@ -470,7 +486,35 @@ public sealed class TextureManager : IDisposable
         {
             Log.Verbose("GetColumn({Tex}, {Col}) from composite", tex, col);
         }
-        return _texturecomposite[tex]!.AsSpan(_texturecolumnofs[tex][col]);
+
+        offset = _texturecolumnofs[tex][col];
+        return _texturecomposite[tex]!;
+    }
+
+    /// <summary>
+    /// Zero-copy overload using the WAD the manager was initialized
+    /// from (DOOM-030c refinement signature).
+    /// </summary>
+    public byte[] GetColumn(int tex, int col, out int offset)
+    {
+        return GetColumn(_wad!, tex, col, out offset);
+    }
+
+    // ------------------------------------------------------------------
+    // Flat cache (W_CacheLumpNum(firstflat + flattranslation[picnum]))
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Flat lump cache (DOOM-030c): the C calls
+    /// W_CacheLumpNum(firstflat + flattranslation[picnum], PU_STATIC)
+    /// in R_DrawPlanes and re-tags PU_CACHE after drawing. Here the
+    /// lump bytes are returned directly (managed arrays are the
+    /// documented deviation; no re-tag needed).
+    /// </summary>
+    public byte[] GetFlat(WadDirectory wad, int picnum)
+    {
+        var lump = _firstflat + _flattranslation[picnum];
+        return wad.CacheLumpNum(lump, PurgeTags.Cache);
     }
 
     // ------------------------------------------------------------------

@@ -57,6 +57,9 @@ public sealed class ViewSetup
     /// <summary>DISTMAP (r_main.c:612).</summary>
     public const int DistMap = 2;
 
+    /// <summary>LIGHTSEGSHIFT (r_main.h:70).</summary>
+    public const int LightSegShift = 4;
+
     // --- r_main.c globals ---
 
     /// <summary>setsizeneeded (r_main.c:652).</summary>
@@ -105,7 +108,10 @@ public sealed class ViewSetup
     public int[] DistScale = [];
 
     /// <summary>screenheightarray[viewwidth] (r_local.h).</summary>
-    public int[] ScreenHeightArray = [];
+    public short[] ScreenHeightArray = [];
+
+    /// <summary>negonearray[viewwidth] (r_local.h).</summary>
+    public short[] NegOneArray = [];
 
     /// <summary>scalelight[LIGHTLEVELS][MAXLIGHTSCALE] (r_main.c:116).</summary>
     public byte[][][] ScaleLight { get; } = new byte[LightLevels][][];
@@ -200,10 +206,12 @@ public sealed class ViewSetup
         PspriteIScale = FixedPoint.FracUnit * Video.ScreenWidth / ViewWidth;
 
         // thing clipping
-        ScreenHeightArray = new int[ViewWidth];
+        ScreenHeightArray = new short[ViewWidth];
+        NegOneArray = new short[ViewWidth];
         for (var i = 0; i < ViewWidth; i++)
         {
-            ScreenHeightArray[i] = ViewHeight;
+            ScreenHeightArray[i] = (short)ViewHeight;
+            NegOneArray[i] = -1;
         }
 
         // planes

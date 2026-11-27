@@ -1,0 +1,77 @@
+{
+  "clipSolid": [
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": -1},{"first": 10, "last": 20},{"first": 320, "last": 2147483647}],
+      "newend": 3,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": -1},{"first": 10, "last": 20},{"first": 40, "last": 60},{"first": 320, "last": 2147483647}],
+      "newend": 4,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": -1},{"first": 10, "last": 20},{"first": 40, "last": 60},{"first": 320, "last": 2147483647}],
+      "newend": 4,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": -1},{"first": 10, "last": 60},{"first": 320, "last": 2147483647},{"first": 0, "last": 0}],
+      "newend": 4,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": -1},{"first": 10, "last": 60},{"first": 320, "last": 2147483647},{"first": 0, "last": 0}],
+      "newend": 4,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 5, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": 2147483647},{"first": 0, "last": 0},{"first": 0, "last": 0}],
+      "newend": 3,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 5, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 0, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 61, "x2": 319, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": 2147483647},{"first": 0, "last": 0},{"first": 0, "last": 0}],
+      "newend": 3,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 5, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 0, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 61, "x2": 319, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": 2147483647},{"first": 0, "last": 0},{"first": 0, "last": 0}],
+      "newend": 3,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 5, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 0, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 61, "x2": 319, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    },
+    {
+      "name": "op",
+      "solidsegs": [{"first": -2147483647, "last": 2147483647},{"first": 0, "last": 0},{"first": 0, "last": 0}],
+      "newend": 3,
+      "drawsegs": [{"x1": 10, "x2": 20, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 40, "x2": 60, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 25, "x2": 35, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 21, "x2": 39, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 5, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 0, "x2": 9, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0},{"x1": 61, "x2": 319, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0}]
+    }
+  ],
+  "planes": [
+    {"find": 0, "index": 0, "minx": 320, "maxx": -1},
+    {"find": 1, "index": 0, "minx": 320, "maxx": -1},
+    {"find": 2, "index": 1, "minx": 320, "maxx": -1},
+    {"find": 3, "index": 2, "minx": 320, "maxx": -1},
+    {"find": 4, "index": 3, "minx": 320, "maxx": -1}
+  ],
+  "checkPlaneSplit": {"index": 0, "minx": 10, "maxx": 25},
+  "checkPlaneExtend": {"index": 0, "minx": 10, "maxx": 40},
+  "storeWallRange": [
+    {"start": 100, "stop": 140, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0, "floorclip": [131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131], "ceilingclip": [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]},
+    {"start": 50, "stop": 90, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0, "floorclip": [131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131,131], "ceilingclip": [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]},
+    {"start": 150, "stop": 151, "scale1": 40960, "scale2": 40960, "scalestep": 0, "silhouette": 0, "bsil": 0, "tsil": 0, "floorclip": [131,131], "ceilingclip": [-1,-1]}
+  ],
+  "projectSprite": [
+    {"case": 0, "count": 1, "x1": 158, "x2": 160, "scale": 40960, "startfrac": 0, "xiscale": 104857, "texturemid": -2621440, "patch": 0},
+    {"case": 1, "count": 1, "x1": 198, "x2": 200, "scale": 40964, "startfrac": 0, "xiscale": 104847, "texturemid": -2621440, "patch": 0},
+    {"case": 2, "count": 0, "x1": 198, "x2": 200, "scale": 40964, "startfrac": 0, "xiscale": 104847, "texturemid": -2621440, "patch": 0}
+  ]
+}

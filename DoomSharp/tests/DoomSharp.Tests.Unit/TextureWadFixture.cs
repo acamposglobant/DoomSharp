@@ -64,19 +64,35 @@ public static class TextureWadFixture
         return WriteWad(path, lumps);
     }
 
-    /// <summary>Minimal sprite patch_t (width/height/offsets only used).</summary>
+    /// <summary>
+    /// Sprite patch_t with one full-height post per column (topdelta=0,
+    /// length=height) so masked-column walkers see real posts.
+    /// </summary>
     public static byte[] SpritePatch(int width, int height, short leftoffset, short topoffset)
     {
-        var data = new byte[8 + width * 4];
+        var headerSize = 8 + width * 4;
+        var postSize = 3 + height + 1;          // topdelta, len, pad, pixels, pad
+        var data = new byte[headerSize + width * (postSize + 1)];
         BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(0), (short)width);
         BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(2), (short)height);
         BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(4), leftoffset);
         BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(6), topoffset);
-        // columnofs all point past header (empty columns are fine for
-        // header-only reads).
+
+        var pos = headerSize;
         for (var x = 0; x < width; x++)
         {
-            BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(8 + x * 4), 8 + width * 4);
+            BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(8 + x * 4), pos);
+            data[pos] = 0;                       // topdelta
+            data[pos + 1] = (byte)height;        // length
+            data[pos + 2] = 0;                   // pad
+            for (var y = 0; y < height; y++)
+            {
+                data[pos + 3 + y] = (byte)((x * 16 + y) & 0xff);
+            }
+            data[pos + 3 + height] = 0;          // pad
+            pos += postSize;
+            data[pos] = 0xff;                    // column terminator
+            pos += 1;
         }
         return data;
     }
