@@ -131,6 +131,7 @@ public class RendererTraceLoggingTests
                 ColumnDrawState.Yl = 5;
                 ColumnDrawState.Yh = 20;
                 ColumnDrawState.Source = new byte[128];
+                ColumnDrawState.SourceOfs = 0;
                 ColumnDrawState.Colormap = new byte[256];
                 ColumnDrawer.DrawColumn(view);
 

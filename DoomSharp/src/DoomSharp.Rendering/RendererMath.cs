@@ -384,12 +384,14 @@ public static class RendererMath
         int num;
         int den;
 
-        var anglea = (int)(AngleTables.Ang90 + (visangle - ViewAngle));
-        var angleb = (int)(AngleTables.Ang90 + (visangle - (uint)RwNormalAngle));
+        // angle_t arithmetic is unsigned; keep the shift unsigned so
+        // angles >= 0x80000000 index finesine positively (r_main.c:387).
+        var anglea = AngleTables.Ang90 + (visangle - ViewAngle);
+        var angleb = AngleTables.Ang90 + (visangle - unchecked((uint)RwNormalAngle));
 
         // both sines are always positive
-        sinea = AngleTables.FineSine[anglea >> AngleTables.AngleToFineShift];
-        sineb = AngleTables.FineSine[angleb >> AngleTables.AngleToFineShift];
+        sinea = AngleTables.FineSine[(int)(anglea >> AngleTables.AngleToFineShift)];
+        sineb = AngleTables.FineSine[(int)(angleb >> AngleTables.AngleToFineShift)];
         num = FixedPoint.FixedMul(Projection, sineb) << DetailShift;
         den = FixedPoint.FixedMul(RwDistance, sinea);
 

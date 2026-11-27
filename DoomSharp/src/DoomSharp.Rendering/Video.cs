@@ -19,6 +19,7 @@
 
 using System.Buffers.Binary;
 using DoomSharp.Core;
+using DoomSharp.Data;
 using Serilog;
 using Serilog.Events;
 
@@ -380,5 +381,116 @@ public static class Video
              243,243,244,244,245,245,246,246,247,247,248,248,249,249,250,250,251,
              251,252,252,253,254,254,255,255]
         ];
+    }
+
+    // ------------------------------------------------------------------
+    // R_FillBackScreen / R_VideoErase / R_DrawViewBorder (r_draw.c:726-875)
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// R_FillBackScreen (r_draw.c:731-811): fills the back screen with
+    /// a pattern for variable screen sizes and draws a beveled edge.
+    /// Uses FLOOR7_2 (DOOM) or GRNROCK (DOOM II) as the border flat.
+    /// </summary>
+    public static void FillBackScreen(ViewSetup view, TextureManager textures, WadDirectory wad, bool commercial)
+    {
+        if (view.ScaledViewWidth == ScreenWidth)
+        {
+            return;                                 // r_draw.c:747-748
+        }
+
+        Log.Verbose("FillBackScreen()");
+
+        var name = commercial ? "GRNROCK" : "FLOOR7_2";   // r_draw.c:740-753
+        var src = wad.CacheLumpName(name, PurgeTags.Cache);
+        var dest = Screens[1];
+
+        for (int y = 0, destOfs = 0; y < ScreenHeight - SBarHeight; y++)
+        {
+            for (var x = 0; x < ScreenWidth / 64; x++)
+            {
+                Array.Copy(src, (y & 63) << 6, dest, destOfs, 64);
+                destOfs += 64;
+            }
+        }
+
+        var patch = new Patch(wad.CacheLumpName("brdr_t", PurgeTags.Cache));
+        for (var x = 0; x < view.ScaledViewWidth; x += 8)
+        {
+            DrawPatch(view.ViewWindowX + x, view.ViewWindowY - 8, 1, patch);
+        }
+
+        patch = new Patch(wad.CacheLumpName("brdr_b", PurgeTags.Cache));
+        for (var x = 0; x < view.ScaledViewWidth; x += 8)
+        {
+            DrawPatch(view.ViewWindowX + x, view.ViewWindowY + view.ViewHeight, 1, patch);
+        }
+
+        patch = new Patch(wad.CacheLumpName("brdr_l", PurgeTags.Cache));
+        for (var y = 0; y < view.ViewHeight; y += 8)
+        {
+            DrawPatch(view.ViewWindowX - 8, view.ViewWindowY + y, 1, patch);
+        }
+
+        patch = new Patch(wad.CacheLumpName("brdr_r", PurgeTags.Cache));
+        for (var y = 0; y < view.ViewHeight; y += 8)
+        {
+            DrawPatch(view.ViewWindowX + view.ScaledViewWidth, view.ViewWindowY + y, 1, patch);
+        }
+
+        // Draw beveled edge (r_draw.c:791-810).
+        DrawPatch(view.ViewWindowX - 8, view.ViewWindowY - 8, 1,
+            new Patch(wad.CacheLumpName("brdr_tl", PurgeTags.Cache)));
+        DrawPatch(view.ViewWindowX + view.ScaledViewWidth, view.ViewWindowY - 8, 1,
+            new Patch(wad.CacheLumpName("brdr_tr", PurgeTags.Cache)));
+        DrawPatch(view.ViewWindowX - 8, view.ViewWindowY + view.ViewHeight, 1,
+            new Patch(wad.CacheLumpName("brdr_bl", PurgeTags.Cache)));
+        DrawPatch(view.ViewWindowX + view.ScaledViewWidth, view.ViewWindowY + view.ViewHeight, 1,
+            new Patch(wad.CacheLumpName("brdr_br", PurgeTags.Cache)));
+    }
+
+    /// <summary>
+    /// R_VideoErase (r_draw.c:818-828): copy a screen buffer range from
+    /// the back screen to the display screen.
+    /// </summary>
+    public static void VideoErase(int ofs, int count)
+    {
+        Array.Copy(Screens[1], ofs, Screens[0], ofs, count);
+    }
+
+    /// <summary>
+    /// R_DrawViewBorder (r_draw.c:843-875): draws the border around the
+    /// view for different size windows.
+    /// </summary>
+    public static void DrawViewBorder(ViewSetup view)
+    {
+        if (view.ScaledViewWidth == ScreenWidth)
+        {
+            return;                                 // r_draw.c:850-851
+        }
+
+        Log.Verbose("DrawViewBorder()");
+
+        var top = ((ScreenHeight - SBarHeight) - view.ViewHeight) / 2;
+        var side = (ScreenWidth - view.ScaledViewWidth) / 2;
+
+        // copy top and one line of left side (r_draw.c:856-857)
+        VideoErase(0, (top * ScreenWidth) + side);
+
+        // copy one line of right side and bottom (r_draw.c:859-861)
+        var ofs = ((view.ViewHeight + top) * ScreenWidth) - side;
+        VideoErase(ofs, (top * ScreenWidth) + side);
+
+        // copy sides using wraparound (r_draw.c:863-871)
+        ofs = (top * ScreenWidth) + ScreenWidth - side;
+        side <<= 1;
+
+        for (var i = 1; i < view.ViewHeight; i++)
+        {
+            VideoErase(ofs, side);
+            ofs += ScreenWidth;
+        }
+
+        MarkRect(0, 0, ScreenWidth, ScreenHeight - SBarHeight);   // r_draw.c:874
     }
 }

@@ -70,7 +70,9 @@ public struct PatchColumn
         _data = data;
         _ofs = ofs;
         TopDelta = data[_ofs];
-        Length = data[_ofs + 1];
+        // The 0xff terminator may be the last byte of the lump; only
+        // read the length for a real post.
+        Length = TopDelta != 0xff ? data[_ofs + 1] : (byte)0;
     }
 
     /// <summary>topdelta — 0xff terminates the column.</summary>
