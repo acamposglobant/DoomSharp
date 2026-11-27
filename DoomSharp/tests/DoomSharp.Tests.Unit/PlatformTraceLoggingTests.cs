@@ -42,8 +42,11 @@ public class PlatformTraceLoggingTests
 
                 PaletteConverter.Convert(indexed, palette, gamma, rgba);
 
-                // The blit is a hot path: no logging at any level.
-                Assert.Empty(sink.Events);
+                // The blit is a hot path: no logging at any level. Filter
+                // by source context — other test classes run in parallel
+                // and may legitimately log into the global sink.
+                Assert.DoesNotContain(sink.Events,
+                    e => (e.Properties["SourceContext"] as ScalarValue)?.Value?.ToString()!.StartsWith("DoomSharp.Platform") == true);
             }
             finally
             {
@@ -68,7 +71,8 @@ public class PlatformTraceLoggingTests
                 queue.PostEvent(new DoomEvent(EventType.KeyDown, DoomKeys.Escape, 0, 0));
                 queue.TryPop(out _);
 
-                Assert.Empty(sink.Events);
+                Assert.DoesNotContain(sink.Events,
+                    e => (e.Properties["SourceContext"] as ScalarValue)?.Value?.ToString()!.StartsWith("DoomSharp.Platform") == true);
             }
             finally
             {
