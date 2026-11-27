@@ -19,6 +19,7 @@
 using DoomSharp.App;
 using DoomSharp.Core;
 using DoomSharp.Data;
+using DoomSharp.Game;
 using DoomSharp.Platform;
 using DoomSharp.Rendering;
 using Serilog;
@@ -84,7 +85,7 @@ ViewSetup.ColormapsGlobal = view.Colormaps;
 view.SetViewSize(11, 0);            // full-screen 320x200 view
 view.ExecuteSetViewSize();
 
-SpriteDefs.InitSprites(view, wad, ["TROO", "SARG", "PLAY", "POSS", "SHTG", "PUNG", "MEDI", "BON1", "BON2", "ARM1", "ARM2", "SOUL", "CLIP", "SHEL"]);
+SpriteDefs.InitSprites(view, wad, InfoTables.SpriteNames);
 SkyRenderer.InitSkyMap();
 
 var scene = new SceneRenderer(wad, level, textures, view);
@@ -97,21 +98,6 @@ var playpal = wad.CacheLumpName("PLAYPAL");
 var palette = PaletteConverter.GetPalette(playpal, 0);
 var rgba = new byte[PaletteConverter.ScreenWidth * PaletteConverter.ScreenHeight * 4];
 var queue = new EventQueue();
-
-// Player state: first deathmatch/player start as a placeholder until
-// DOOM-021 spawns the real player.
-if (level.Things.Length == 0)
-{
-    Console.Error.WriteLine("No things found in E1M1");
-    return 1;
-}
-
-var start = level.Things[0];
-int posX = start.X << 16, posY = start.Y << 16;
-var angle = (uint)(start.Angle << 16);   // mapthing angle byte -> BAM
-
-const int moveSpeed = 4 << 16;           // per frame, fixed
-const uint turnSpeed = 2u << 25;         // per frame, BAM
 
 // ---- audio (DOOM-040b) ------------------------------------------------------
 // Live OpenAL output when a device exists; headless fallback otherwise.
@@ -166,8 +152,39 @@ for (int i = 1; i < SfxId.NumSfx; i++)
 }
 
 var mixBuffer = new short[SoundMixer.BufferSize];
-var listener = new SoundOrigin(posX, posY, angle);
+var listener = new SoundOrigin(0, 0, 0u);
 soundManager.Listener = listener;
+
+// ---- game simulation (DOOM-021a) -------------------------------------------
+// P_SetupLevel-era init: game-side level state, then spawn all map things
+// (P_SpawnMapThing) including the player (P_SpawnPlayer).
+if (level.Things.Length == 0)
+{
+    Console.Error.WriteLine("No things found in E1M1");
+    return 1;
+}
+
+GameLevel.Init(level);
+MapObject.PRandom = () => random.PRandom();
+MapObject.GameSkill = SkillKind.Medium;
+
+// Resolve skyflatnum the way R_InitSkyMap does (r_sky.c:62-66).
+MapObject.SkyFlatNum = textures.FlatNumForName(wad, "F_SKY1");
+
+var player = new Player();
+Thinker.InitThinkers(ref MapObject.ThinkerCap);
+foreach (var thing in level.Things)
+{
+    MapObject.SpawnMapThing(thing);
+}
+
+// P_SpawnPlayer created the player mobj (MT_PLAYER is the first thinker);
+// wire the Player object to it.
+var firstMobj = MapObject.ThinkerCap.Next as Mobj;
+firstMobj!.Player = player;
+player.Mo = firstMobj;
+player.ViewHeight = Player.ViewHeightConst;
+
 
 Log.Information("Starting render loop — arrows/WASD to move, SPACE fires, ESC to quit");
 
@@ -177,9 +194,9 @@ while (!host.ShouldClose)
     host.PumpEvents();
     host.Poll(queue);
 
-    // Simple camera control (not the real game responder — DOOM-021).
+    // Build the tic command from input (the game responder's movement part).
     var forward = 0;
-    var side = 0;
+    var side = 0; _ = side;
     var turn = 0;
 
     while (queue.TryPop(out var ev))
@@ -203,21 +220,20 @@ while (!host.ShouldClose)
         }
     }
 
-    // Move in the view direction (fine trig from the BAM angle).
-    var fineAngle = (int)(angle >> AngleTables.AngleToFineShift);
-    var sin = AngleTables.FineSine[fineAngle];
-    var cos = AngleTables.FineCosine[fineAngle];
-    posX += (cos * (forward * moveSpeed)) >> 16;
-    posX += (sin * (side * moveSpeed)) >> 16;
-    posY += (sin * (forward * moveSpeed)) >> 16;
-    posY -= (cos * (side * moveSpeed)) >> 16;
-    angle += (uint)(turn * (int)turnSpeed);
+    // TicCmd (d_ticcmd.h): forwardmove/sidemove *2048, angleturn <<16.
+    player.Cmd.ForwardMove = (sbyte)(forward * 25);   // run speed
+    player.Cmd.SideMove = 0;
+    player.Cmd.AngleTurn = (short)(turn * 4);         // <<16 in P_MovePlayer
 
-    // Render (DOOM-030 pipeline).
-    scene.RenderPlayerView(posX, posY, 41 << 16, angle, SpriteDefs.Sprites);
+    // P_Ticker: player think + thinkers + leveltime.
+    GameTicker.Ticker(player);
+
+    // Render (DOOM-030 pipeline) from the live player mobj.
+    var mo = player.Mo!;
+    scene.RenderPlayerView(mo.X, mo.Y, player.ViewZ, mo.Angle, SpriteDefs.Sprites);
 
     // Audio: refresh listener, mix one 512-frame block, submit to device.
-    listener = new SoundOrigin(posX, posY, angle);
+    listener = new SoundOrigin(mo.X, mo.Y, mo.Angle);
     soundManager.Listener = listener;
     soundManager.UpdateSounds(listener);
     mixer.UpdateSound(mixBuffer);

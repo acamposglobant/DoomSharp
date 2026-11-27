@@ -88,6 +88,13 @@ public sealed class Line
     public int[] Sidenum = new int[2];
     public int FrontSector = -1;
     public int BackSector = -1;
+
+    /// <summary>
+    /// line_t.validcount (r_defs.h) — game-side dedup marker used by
+    /// P_BlockLinesIterator. Lives here so the renderer and game share
+    /// the same Line instances.
+    /// </summary>
+    public int ValidCount;
 }
 
 /// <summary>sector_t (r_defs.h:246-289). Flat names stored raw (DOOM-030 resolves).</summary>
