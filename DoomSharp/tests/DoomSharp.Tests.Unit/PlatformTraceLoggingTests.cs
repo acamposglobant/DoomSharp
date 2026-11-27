@@ -21,6 +21,7 @@ using Xunit;
 
 namespace DoomSharp.Tests.Unit;
 
+[Collection("RendererSerial")]
 public class PlatformTraceLoggingTests
 {
     [Fact]

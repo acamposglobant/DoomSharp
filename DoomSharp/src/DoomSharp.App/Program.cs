@@ -113,7 +113,63 @@ var angle = (uint)(start.Angle << 16);   // mapthing angle byte -> BAM
 const int moveSpeed = 4 << 16;           // per frame, fixed
 const uint turnSpeed = 2u << 25;         // per frame, BAM
 
-Log.Information("Starting render loop — arrows/WASD to move, ESC to quit");
+// ---- audio (DOOM-040b) ------------------------------------------------------
+// Live OpenAL output when a device exists; headless fallback otherwise.
+IAudioOutput audioOutput = OpenAlAudioOutput.TryCreate();
+if (!audioOutput.IsLive)
+{
+    audioOutput.Dispose();
+    audioOutput = new HeadlessAudioOutput();
+}
+
+var mixer = new SoundMixer();
+var random = new DoomRandom();
+var soundManager = new SoundManager(
+    mixer,
+    pointToAngle2: RendererMath.PointToAngle2,
+    fineSine: fineIndex => AngleTables.FineSine[fineIndex],
+    random: () => random.MRandom(),
+    lookupMusicLump: name => wad.CheckNumForName(name),
+    numChannels: SoundManager.DefaultNumChannels,
+    gameMap: 1);
+soundManager.Init(sfxVolume: 15, musicVolume: 15);
+
+// Pre-cache all SFX data (I_InitSound, i_sound.c:799-813): load each DS*
+// lump, parse the DMX header, pad, and share linked sounds' data.
+for (int i = 1; i < SfxId.NumSfx; i++)
+{
+    var sfx = SoundTables.Sfx[i];
+    if (sfx.Link is not null)
+    {
+        continue; // resolved after the loop, like the C's second pass
+    }
+    var lumpName = "ds" + sfx.Name;
+    var lumpNum = wad.CheckNumForName(lumpName);
+    if (lumpNum < 0)
+    {
+        lumpNum = wad.GetNumForName("dspistol"); // missing-lump fallback
+    }
+    var dmx = DmxSound.Parse(wad.CacheLumpNum(lumpNum));
+    sfx.Data = dmx.Samples;
+    sfx.Length = dmx.Samples.Length;
+}
+
+// Resolve aliases after loading (i_sound.c:807-812).
+for (int i = 1; i < SfxId.NumSfx; i++)
+{
+    var sfx = SoundTables.Sfx[i];
+    if (sfx.Link is { } link && sfx.Data is null)
+    {
+        sfx.Data = link.Data;
+        sfx.Length = link.Length;
+    }
+}
+
+var mixBuffer = new short[SoundMixer.BufferSize];
+var listener = new SoundOrigin(posX, posY, angle);
+soundManager.Listener = listener;
+
+Log.Information("Starting render loop — arrows/WASD to move, SPACE fires, ESC to quit");
 
 // ---- main loop ------------------------------------------------------------
 while (!host.ShouldClose)
@@ -139,6 +195,10 @@ while (!host.ShouldClose)
                 case DoomKeys.Escape:
                     host.Dispose();
                     return 0;
+                case ' ':
+                    // Demo SFX trigger: fire the pistol at the listener.
+                    soundManager.StartSound(listener, SfxId.Pistol);
+                    break;
             }
         }
     }
@@ -155,6 +215,13 @@ while (!host.ShouldClose)
 
     // Render (DOOM-030 pipeline).
     scene.RenderPlayerView(posX, posY, 41 << 16, angle, SpriteDefs.Sprites);
+
+    // Audio: refresh listener, mix one 512-frame block, submit to device.
+    listener = new SoundOrigin(posX, posY, angle);
+    soundManager.Listener = listener;
+    soundManager.UpdateSounds(listener);
+    mixer.UpdateSound(mixBuffer);
+    audioOutput.Submit(mixBuffer);
 
     // Present: indexed -> RGBA with palette 0 + current gamma.
     PaletteConverter.Convert(Video.Screens[0], palette, Video.GammaTable[Video.UseGamma], rgba);
