@@ -5,6 +5,7 @@
     <Project Path="src/DoomSharp.App/DoomSharp.App.csproj" />
     <Project Path="src/DoomSharp.Platform/DoomSharp.Platform.csproj" />
     <Project Path="src/DoomSharp.Rendering/DoomSharp.Rendering.csproj" />
+    <Project Path="src/DoomSharp.Game/DoomSharp.Game.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DoomSharp.Tests.Unit/DoomSharp.Tests.Unit.csproj" />

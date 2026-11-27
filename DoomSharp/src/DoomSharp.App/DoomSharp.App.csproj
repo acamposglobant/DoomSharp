@@ -14,6 +14,7 @@
     <ProjectReference Include="..\DoomSharp.Data\DoomSharp.Data.csproj" />
     <ProjectReference Include="..\DoomSharp.Platform\DoomSharp.Platform.csproj" />
     <ProjectReference Include="..\DoomSharp.Rendering\DoomSharp.Rendering.csproj" />
+    <ProjectReference Include="..\DoomSharp.Game\DoomSharp.Game.csproj" />
   </ItemGroup>
 
   <ItemGroup>
