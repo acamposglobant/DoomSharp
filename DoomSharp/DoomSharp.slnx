@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/DoomSharp.Core/DoomSharp.Core.csproj" />
     <Project Path="src/DoomSharp.Data/DoomSharp.Data.csproj" />
+    <Project Path="src/DoomSharp.App/DoomSharp.App.csproj" />
     <Project Path="src/DoomSharp.Platform/DoomSharp.Platform.csproj" />
     <Project Path="src/DoomSharp.Rendering/DoomSharp.Rendering.csproj" />
   </Folder>

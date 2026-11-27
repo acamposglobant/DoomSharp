@@ -205,15 +205,23 @@ Serilog trace logs at `LogEventLevel.Verbose`:
 
 ### DOOM-040 — Platform: video/audio/input (replacement, not port)
 
-- **Status:** Proposed
+- **Status:** In progress — **Slice DOOM-040a Done (2026-11-27)**; remaining slices (audio, network, full game loop) Proposed
 - **Original files:** `i_video.c` (X11/XSHM), `i_sound.c` (sndserver pipe protocol, `i_sound.c:483-486,754`), `sndserv/*` (`/dev/dsp` OSS), `i_net.c` (UDP port 5029)
 - **Responsibility:** window/presentation, audio output, input, network transport
-- **Dependencies:** chosen multimedia binding (SDL2# or similar — ADR required per `ARCHITECTURE.md` §4)
-- **Target project:** `DoomSharp.Platform`, `DoomSharp.Audio`
+- **Dependencies:** chosen multimedia binding (ADR-005: Silk.NET 2.23 — Accepted)
+- **Target project:** `DoomSharp.Platform`, `DoomSharp.App`
 - **Semantic risks:** original X11 path has quirks (pointer warp, blocky multiply mode, `__BIG_ENDIAN__` branches); sndserv protocol is text-based and simple to reimplement if needed
 - **Test strategy:** manual + integration; audio verified by captured output buffers in tests where feasible
 - **Acceptance criteria:** playable end-to-end on Windows + Linux; input mapping matches `xlatekey` (`i_video.c:97`)
 - **Evidence/notes:** `i_video.c:29-90`, `i_sound.c:60-90`, `sndserv/linux.c:43-81`
+
+#### DOOM-040a — Video Frame Presenter, PLAYPAL/Gamma Palette, Input Events, Window Host — Done (2026-11-27)
+
+- **Scope:** `I_SetPalette`/`UploadNewPalette` (`i_video.c:530-585`), `xlatekey` (`i_video.c:97-162`), `I_GetEvent` key path (`i_video.c:194-260`), `event_t`/`evtype_t`/`MAXEVENTS` (`d_event.h:34-112`), `D_PostEvent`/`D_ProcessEvents` ring (`d_main.c:141-176`), `KEY_*` constants (`doomdef.h:250-280`), and the window/presentation host replacing `I_InitGraphics`/`I_FinishUpdate`. **Deferred:** mouse/joystick event translation (DOOM-040b), audio (`i_sound.c`/`sndserv`, DOOM-040b), network (`i_net.c`, DOOM-040c), full game responder (`D_ProcessEvents` responder chain, DOOM-021).
+- **Target:** `DoomSharp.Platform`: `PaletteConverter` (PLAYPAL 14×768 + gamma → RGBA8888), `DoomEvent`/`EventType`/`DoomKeys`/`KeyTranslator`/`EventQueue`, `IFramePresenter` + `HeadlessFramePresenter` + `IInputSource` seams. `DoomSharp.App`: `SilkWindowHost` (Silk.NET GLFW backend, GL texture blit, 4:3 letterbox, integer scale ×1..×4) + `Program.cs` smoke-test loop (E1M1 + `RenderPlayerView` + arrow/WASD camera).
+- **Exact details preserved:** gamma pass before channel expansion (`c = gammatable[usegamma][*palette++]`, `i_video.c:565-570`); `xlatekey` named-key table + printable range `space..asciitilde` → `' '..'~'` + A-Z lowercase fold + Delete→BACKSPACE + KP_Equal/KP_Subtract + both shifts/ctrls/alts+meta→RSHIFT/RCRTL/RALT (`i_video.c:97-162`); `KEY_*` constants exact (`doomdef.h:250-280`, `KEY_LALT=KEY_RALT`); `event_t` shape (data1 keys/buttons, data2/3 mouse x/y); `MAXEVENTS=64` ring with `&(MAXEVENTS-1)` wrap and the C's no-overflow-check lap behavior (head laps tail loses unread events; full lap reads as empty — `d_main.c:150-154,170`); PLAYPAL 14×768 layout (palette 0 normal, 1-8 pain reds, 9-12 golds, 13 radiation green).
+- **Documented deviations:** (1) X11/Shm presentation replaced by Silk.NET GLFW window + GL texture blit (replacement, not port — ADR-005). (2) `xlatekey` switches on a platform-neutral `PlatformKey` enum (named keys at 0x100+, printable range = ASCII) instead of X11 keysyms; the window adapter maps Silk.NET `Key` → `PlatformKey`. (3) The C event ring's head-laps-tail overwrite is preserved exactly (no managed "fix" — documented UB-compatible behavior). (4) `I_SetPalette` becomes `PaletteConverter.Convert` (indexed→RGBA per frame) instead of an X colormap upload; the palette slice + gamma row are explicit parameters. (5) Mouse/joystick events deferred to DOOM-040b. (6) `SilkWindowHost` buffers key callbacks between frames (Silk callback model) and drains them in `Poll` — the C polled X synchronously in `I_GetEvent`. (7) `DoomSharp.App` is the only project referencing Silk.NET; the test project stays pure managed (headless CI guarantee, ADR-005).
+- **Test evidence:** 2296/2296 passing (42 new), 0 warnings, Release `-warnaserror` clean. Headless suites: `PaletteConverterTests` (gamma-then-expand order, slice selection, range guards), `KeyTranslatorTests` (all named keys, printable fold, Delete→BACKSPACE, KP aliases, constant values vs `doomdef.h`), `EventQueueTests` (FIFO, lap-overwrite, full-lap-empty, MAXEVENTS=64), `HeadlessFramePresenterTests` (frame copy semantics), `PlatformTraceLoggingTests` (ADR-004: palette blit and event queue are silent at all levels). Interactive smoke test: `dotnet run --project src/DoomSharp.App -- -iwad <doom1.wad>` (arrow/WASD camera, ESC quit) — manual verification, not CI.
 
 ## Deferred / out of scope (initial)
 
