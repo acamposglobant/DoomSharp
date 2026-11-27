@@ -59,6 +59,7 @@ public sealed class CollectingSink : ILogEventSink
     }
 }
 
+[Collection("RendererSerial")]
 public class TraceLoggingTests : IDisposable
 {
     private readonly CollectingSink _sink = new();
